@@ -1,0 +1,10 @@
+{
+  "name": "cordova-plugin-iotum-helper",
+  "version": "1.0.0",
+  "description": "Cordova Plugin for Iotum Apps",
+  "keywords": [
+    "cordova"
+  ],
+  "author": "Jerry Hu",
+  "license": "MIT"
+}

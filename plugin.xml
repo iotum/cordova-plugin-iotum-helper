@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+    xmlns:android="http://schemas.android.com/apk/res/android" id="cordova-plugin-iotum-helper" version="1.0.0">
+    <name>IotumHelper</name>
+    <description>Iotum App Helpers</description>
+    <author>Jerry Hu</author>
+
+    <license>MIT</license>
+    <keywords>cordova</keywords>
+
+    <engines>
+        <engine name="cordova" version=">=10.0.0" />
+    </engines>
+
+    <js-module src="www/iotum_helpers.js" name="IotumHelper">
+        <clobbers target="cordova.plugins.iotumHelper" />
+    </js-module>
+
+    <platform name="ios">
+        <config-file target="config.xml" parent="/*">
+            <feature name="IotumHelper">
+                <param name="ios-package" value="IotumHelperPlugin" />
+            </feature>
+        </config-file>
+
+        <header-file src="src/ios/IotumHelperPlugin.h" />
+        <source-file src="src/ios/IotumHelperPlugin.m" />
+    </platform>
+</plugin>
