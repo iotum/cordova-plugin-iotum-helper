@@ -17,20 +17,29 @@
 // Supports a four-byte hex value (ARGB)
 // Note: this is different from the CSS color (RGBA)
 - (UIColor *)colorFromHexString:(NSString*)hexString {
-    unsigned int rgbValue = 0;
-    hexString = [hexString stringByReplacingOccurrencesOfString:@"#" withString:@"0xFF"];
+    // #RRGGBB to 0xRRGGBB
+    hexString = [hexString stringByReplacingOccurrencesOfString:@"#" withString:@"0x"];
+
+    // 0xRRGGBB to 0xAARRGGBB
+    if ([hexString hasPrefix:@"0x"] && [hexString length] == 8) {
+        hexString = [@"0xFF" stringByAppendingString:[hexString substringFromIndex:2]];
+    }
+
+    // 0xAARRGGBB to int
+    unsigned colorValue = 0;
     NSScanner *scanner = [NSScanner scannerWithString:hexString];
-    [scanner scanHexInt:&rgbValue];
+    if (![scanner scanHexInt:&colorValue]) {
+        return nil;
+    }
 
-    return [UIColor colorWithRed:((float)((rgbValue & 0x00FF0000) >> 16)) / 255.0
-                           green:((float)((rgbValue & 0x0000FF00) >>  8)) / 255.0
-                            blue:((float)((rgbValue & 0x000000FF) >>  0)) / 255.0
-                           alpha:((float)((rgbValue & 0xFF000000) >> 24)) / 255.0];
+    // int to UIColor
+    return [UIColor colorWithRed:((float)((colorValue & 0x00FF0000) >> 16)) / 255.0
+                           green:((float)((colorValue & 0x0000FF00) >>  8)) / 255.0
+                            blue:((float)((colorValue & 0x000000FF) >>  0)) / 255.0
+                           alpha:((float)((colorValue & 0xFF000000) >> 24)) / 255.0];
 }
-
 
 - (void)pluginInitialize {
 }
-
 
 @end
