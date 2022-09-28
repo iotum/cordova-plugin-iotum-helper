@@ -17,6 +17,23 @@
 // Supports a four-byte hex value (ARGB)
 // Note: this is different from the CSS color (RGBA)
 - (UIColor *)colorFromHexString:(NSString*)hexString {
+    // Validate format
+    NSError* error = NULL;
+    NSRegularExpression* regex = [NSRegularExpression regularExpressionWithPattern:@"^(#[0-9A-F]{3}|(0x|#)([0-9A-F]{2})?[0-9A-F]{6})$" options:NSRegularExpressionCaseInsensitive error:&error];
+    NSUInteger countMatches = [regex numberOfMatchesInString:hexString options:0 range:NSMakeRange(0, [hexString length])];
+
+    if (!countMatches) {
+        return nil;
+    }
+
+    // #FAB to #FFAABB
+    if ([hexString hasPrefix:@"#"] && [hexString length] == 4) {
+        NSString* r = [hexString substringWithRange:NSMakeRange(1, 1)];
+        NSString* g = [hexString substringWithRange:NSMakeRange(2, 1)];
+        NSString* b = [hexString substringWithRange:NSMakeRange(3, 1)];
+        hexString = [NSString stringWithFormat:@"#%@%@%@%@%@%@", r, r, g, g, b, b];
+    }
+
     // #RRGGBB to 0xRRGGBB
     hexString = [hexString stringByReplacingOccurrencesOfString:@"#" withString:@"0x"];
 
