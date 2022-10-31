@@ -1,16 +1,49 @@
 #import "IotumHelperPlugin.h"
+#import <objc/runtime.h>
 
 @implementation IotumHelperPlugin
+
+#pragma mark Initialize
+
+NSString* WKClassString;
+static IMP WKOriginalImp;
+
+- (void)pluginInitialize
+{
+    NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
+
+    [nc addObserver:self selector:@selector(keyboardDidShow:) name:UIKeyboardDidShowNotification object:nil];
+    [nc addObserver:self selector:@selector(keyboardDidHide:) name:UIKeyboardDidHideNotification object:nil];
+
+    WKClassString = [@[@"WK", @"Content", @"View"] componentsJoinedByString:@""];
+}
 
 - (void)setAppBackgroundColor:(CDVInvokedUrlCommand *)command
 {
     NSString* color = [[NSString stringWithFormat:@"%@", [command.arguments objectAtIndex:0]] lowercaseString];
 
     if ([color hasPrefix:@"#"]) {
-        // Set main view color
-        UIWindow *window = [[[UIApplication sharedApplication] delegate] window];
-        UIView *topView = window.rootViewController.view;
-        topView.backgroundColor = [self colorFromHexString:color];
+        // Set main view color (the parent of webView)
+        self.webView.superview.backgroundColor = [self colorFromHexString:color];
+    }
+}
+
+- (void)hideKeyboardAccessoryBar:(CDVInvokedUrlCommand *)command
+{
+    BOOL hide = [[command.arguments objectAtIndex:0] boolValue];
+
+    Method WKMethod = class_getInstanceMethod(NSClassFromString(WKClassString), @selector(inputAccessoryView));
+
+    if (hide) {
+        WKOriginalImp = method_getImplementation(WKMethod);
+
+        IMP newImp = imp_implementationWithBlock(^(id _s) {
+            return nil;
+        });
+
+        method_setImplementation(WKMethod, newImp);
+    } else {
+        method_setImplementation(WKMethod, WKOriginalImp);
     }
 }
 
@@ -56,7 +89,18 @@
                            alpha:((float)((colorValue & 0xFF000000) >> 24)) / 255.0];
 }
 
-- (void)pluginInitialize {
+- (void)keyboardDidShow: (NSNotification *) notif {
+    [self.webView.scrollView setContentInset:UIEdgeInsetsZero];
+
+    CGSize rect = [notif.userInfo[UIKeyboardFrameEndUserInfoKey] CGRectValue].size;
+    NSString *js = [NSString stringWithFormat:@"cordova.plugins.iotumHelper.Keyboard.fireOnShow(%d);", (int)rect.height];
+    [self.commandDelegate evalJs:js];
+}
+
+- (void)keyboardDidHide: (NSNotification *) notif {
+    [self.commandDelegate evalJs:@"cordova.plugins.iotumHelper.Keyboard.fireOnHide();"];
+
+    [self.webView.scrollView setContentInset:UIEdgeInsetsZero];
 }
 
 @end

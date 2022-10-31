@@ -20,6 +20,7 @@
         <config-file target="config.xml" parent="/*">
             <feature name="IotumHelper">
                 <param name="ios-package" value="IotumHelperPlugin" />
+                <param name="onload" value="true" />
             </feature>
         </config-file>
 
