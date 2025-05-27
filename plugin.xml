@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
-    xmlns:android="http://schemas.android.com/apk/res/android" id="cordova-plugin-iotum-helper" version="1.0.0">
+    xmlns:android="http://schemas.android.com/apk/res/android" id="cordova-plugin-iotum-helper" version="1.2.0">
     <name>IotumHelper</name>
     <description>Iotum App Helpers</description>
     <author>Jerry Hu</author>
