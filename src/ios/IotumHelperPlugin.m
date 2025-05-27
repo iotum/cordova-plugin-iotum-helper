@@ -146,4 +146,17 @@ static IMP WKOriginalImp;
     [self.webView.scrollView setContentInset:UIEdgeInsetsZero];
 }
 
+- (void) log:(CDVInvokedUrlCommand*)command
+{
+    NSString* message = [command.arguments objectAtIndex:0];
+    if (message != nil && [message length] > 0) {
+        [self logMessage:message];
+    }
+}
+
+- (void)logMessage:(NSString *)message
+{
+    NSLog(@"[IotumHelper]: %@", message);
+}
+
 @end

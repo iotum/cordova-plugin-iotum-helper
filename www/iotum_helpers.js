@@ -1,12 +1,16 @@
 var exec = require('cordova/exec');
 
 exports.setAppBackgroundColor = function (argb) {
-	cordova.exec(null, null, 'IotumHelper', 'setAppBackgroundColor', [argb]);
+	exec(null, null, 'IotumHelper', 'setAppBackgroundColor', [argb]);
 };
 
 exports.hideKeyboardAccessoryBar = function (hide) {
-	cordova.exec(null, null, 'IotumHelper', 'hideKeyboardAccessoryBar', [hide]);
+	exec(null, null, 'IotumHelper', 'hideKeyboardAccessoryBar', [hide]);
 };
+
+exports.log = function (message) {
+	exec(null, null, "IotumHelper", "log", [message]);
+}
 
 var keyboard = Object.freeze({
 	fireOnShow: function (height) {
