@@ -1,6 +1,7 @@
 #import "IotumHelperPlugin.h"
+#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 #import <objc/runtime.h>
-#import <WebKit/WebKit.h>
 
 @implementation IotumHelperPlugin
 
@@ -9,19 +10,9 @@
 NSString* WKClassString;
 static IMP WKOriginalImp;
 
-- (WKWebView *)currentWebView
-{
-    id engineWebView = self.webViewEngine.engineWebView;
-    if ([engineWebView isKindOfClass:[WKWebView class]]) {
-        return (WKWebView *)engineWebView;
-    }
-    return nil;
-}
-
 - (void)pluginInitialize
 {
     NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
-    WKWebView *webView = [self currentWebView];
 
     [nc addObserver:self selector:@selector(keyboardDidShow:) name:UIKeyboardDidShowNotification object:nil];
     [nc addObserver:self selector:@selector(keyboardDidHide:) name:UIKeyboardDidHideNotification object:nil];
@@ -31,10 +22,10 @@ static IMP WKOriginalImp;
 
     // Prevent WKWebView from adding the adjustedContentInset
     // (https://github.com/WebKit/WebKit/blob/main/Source/WebKit/UIProcess/API/ios/WKWebViewIOS.mm)
-    [nc removeObserver:webView name:UIKeyboardWillHideNotification object:nil];
-    [nc removeObserver:webView name:UIKeyboardWillShowNotification object:nil];
-    [nc removeObserver:webView name:UIKeyboardWillChangeFrameNotification object:nil];
-    // [nc removeObserver:webView name:UIKeyboardDidChangeFrameNotification object:nil];
+    [nc removeObserver:self.webView name:UIKeyboardWillHideNotification object:nil];
+    [nc removeObserver:self.webView name:UIKeyboardWillShowNotification object:nil];
+    [nc removeObserver:self.webView name:UIKeyboardWillChangeFrameNotification object:nil];
+    // [nc removeObserver:self.webView name:UIKeyboardDidChangeFrameNotification object:nil];
 
     WKClassString = [@[@"WK", @"Content", @"View"] componentsJoinedByString:@""];
 }
@@ -42,11 +33,10 @@ static IMP WKOriginalImp;
 - (void)setAppBackgroundColor:(CDVInvokedUrlCommand *)command
 {
     NSString* color = [[NSString stringWithFormat:@"%@", [command.arguments objectAtIndex:0]] lowercaseString];
-    WKWebView *webView = [self currentWebView];
 
-    if ([color hasPrefix:@"#"] && webView.superview != nil) {
+    if ([color hasPrefix:@"#"] && self.webView.superview != nil) {
         // Set main view color (the parent of webView)
-        webView.superview.backgroundColor = [self colorFromHexString:color];
+        self.webView.superview.backgroundColor = [self colorFromHexString:color];
     }
 }
 
@@ -148,18 +138,24 @@ static IMP WKOriginalImp;
 
 - (void)_updateFrame: (int) height {
     NSLog(@"Keyboard: updating frame %d", height);
-    WKWebView *webView = [self currentWebView];
+    UIView *webView = self.webView;
     if (webView == nil) {
         return;
     }
 
-    // Use controller bounds so this also works for Scene-based apps and split-screen layouts.
-    CGSize size = self.viewController.view.bounds.size;
+    UIWindow *currentWindow = self.viewController.view.window;
+    CGSize size = currentWindow != nil ? currentWindow.bounds.size : self.viewController.view.bounds.size;
     CGPoint origin = webView.frame.origin;
 
     // Change the frame size to prevent the ScrollView from pushing the WebView up.
     [webView setFrame:CGRectMake(origin.x, origin.y, size.width - origin.x, size.height - origin.y - height)];
-    [webView.scrollView setContentInset:UIEdgeInsetsZero];
+    if ([webView respondsToSelector:@selector(scrollView)]) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+        UIScrollView *scrollView = [webView performSelector:@selector(scrollView)];
+#pragma clang diagnostic pop
+        [scrollView setContentInset:UIEdgeInsetsZero];
+    }
 }
 
 - (void) log:(CDVInvokedUrlCommand*)command
