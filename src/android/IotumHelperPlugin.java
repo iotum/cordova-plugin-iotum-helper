@@ -6,7 +6,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import android.util.Log;
 
-public class IotumHelper extends CordovaPlugin {
+public class IotumHelperPlugin extends CordovaPlugin {
 
     private static final String TAG = "IotumHelper";
 

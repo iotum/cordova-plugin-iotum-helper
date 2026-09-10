@@ -1,4 +1,6 @@
 #import "IotumHelperPlugin.h"
+#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 #import <objc/runtime.h>
 
 @implementation IotumHelperPlugin
@@ -136,14 +138,19 @@ static IMP WKOriginalImp;
 
 - (void)_updateFrame: (int) height {
     NSLog(@"Keyboard: updating frame %d", height);
-
-    // NOTE: to handle split screen correctly, the application's window bounds must be used as opposed to the screen's bounds.
-    CGSize size = [[[[UIApplication sharedApplication] delegate] window] bounds].size;
+    UIWindow *currentWindow = self.viewController.view.window;
+    CGSize size = currentWindow.bounds.size;
     CGPoint origin = self.webView.frame.origin;
 
     // Change the frame size to prevent the ScrollView from pushing the WebView up.
     [self.webView setFrame:CGRectMake(origin.x, origin.y, size.width - origin.x, size.height - origin.y - height)];
-    [self.webView.scrollView setContentInset:UIEdgeInsetsZero];
+    if ([self.webView respondsToSelector:@selector(scrollView)]) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+        UIScrollView *scrollView = [self.webView performSelector:@selector(scrollView)];
+#pragma clang diagnostic pop
+        [scrollView setContentInset:UIEdgeInsetsZero];
+    }
 }
 
 - (void) log:(CDVInvokedUrlCommand*)command

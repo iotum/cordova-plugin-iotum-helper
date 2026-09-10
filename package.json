@@ -5,6 +5,10 @@
   "keywords": [
     "cordova"
   ],
+  "engines": {
+    "cordova": ">=10.0.0",
+    "cordova-ios": ">=8.0.0"
+  },
   "author": "Jerry Hu",
   "license": "MIT"
 }
