@@ -34,7 +34,7 @@ static IMP WKOriginalImp;
 {
     NSString* color = [[NSString stringWithFormat:@"%@", [command.arguments objectAtIndex:0]] lowercaseString];
 
-    if ([color hasPrefix:@"#"] && self.webView.superview != nil) {
+    if ([color hasPrefix:@"#"]) {
         // Set main view color (the parent of webView)
         self.webView.superview.backgroundColor = [self colorFromHexString:color];
     }
@@ -138,21 +138,16 @@ static IMP WKOriginalImp;
 
 - (void)_updateFrame: (int) height {
     NSLog(@"Keyboard: updating frame %d", height);
-    UIView *webView = self.webView;
-    if (webView == nil) {
-        return;
-    }
-
     UIWindow *currentWindow = self.viewController.view.window;
-    CGSize size = currentWindow != nil ? currentWindow.bounds.size : self.viewController.view.bounds.size;
-    CGPoint origin = webView.frame.origin;
+    CGSize size = currentWindow.bounds.size;
+    CGPoint origin = self.webView.frame.origin;
 
     // Change the frame size to prevent the ScrollView from pushing the WebView up.
-    [webView setFrame:CGRectMake(origin.x, origin.y, size.width - origin.x, size.height - origin.y - height)];
-    if ([webView respondsToSelector:@selector(scrollView)]) {
+    [self.webView setFrame:CGRectMake(origin.x, origin.y, size.width - origin.x, size.height - origin.y - height)];
+    if ([self.webView respondsToSelector:@selector(scrollView)]) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-        UIScrollView *scrollView = [webView performSelector:@selector(scrollView)];
+        UIScrollView *scrollView = [self.webView performSelector:@selector(scrollView)];
 #pragma clang diagnostic pop
         [scrollView setContentInset:UIEdgeInsetsZero];
     }
