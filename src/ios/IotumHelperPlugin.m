@@ -1,4 +1,5 @@
 #import "IotumHelperPlugin.h"
+#import <Intents/Intents.h>
 #import <objc/runtime.h>
 
 @implementation IotumHelperPlugin
@@ -26,6 +27,60 @@ static IMP WKOriginalImp;
     // [nc removeObserver:self.webView name:UIKeyboardDidChangeFrameNotification object:nil];
 
     WKClassString = [@[@"WK", @"Content", @"View"] componentsJoinedByString:@""];
+}
+
+- (void)getFocusStatus:(CDVInvokedUrlCommand *)command
+{
+    NSMutableDictionary *status = [@{
+        @"supported": @NO,
+        @"authorizationStatus": @"unavailable",
+        @"isFocused": [NSNull null]
+    } mutableCopy];
+
+    if (@available(iOS 15.0, *)) {
+        INFocusStatusCenter *center = [INFocusStatusCenter defaultCenter];
+        status[@"supported"] = @YES;
+
+        switch (center.authorizationStatus) {
+            case INFocusStatusAuthorizationStatusNotDetermined:
+                status[@"authorizationStatus"] = @"notDetermined";
+                break;
+            case INFocusStatusAuthorizationStatusRestricted:
+                status[@"authorizationStatus"] = @"restricted";
+                break;
+            case INFocusStatusAuthorizationStatusDenied:
+                status[@"authorizationStatus"] = @"denied";
+                break;
+            case INFocusStatusAuthorizationStatusAuthorized:
+                status[@"authorizationStatus"] = @"authorized";
+                status[@"isFocused"] = center.focusStatus.isFocused ?: [NSNull null];
+                break;
+            default:
+                break;
+        }
+    }
+
+    CDVPluginResult *result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:status];
+    [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+}
+
+- (void)requestFocusStatusAuthorization:(CDVInvokedUrlCommand *)command
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (@available(iOS 15.0, *)) {
+            INFocusStatusCenter *center = [INFocusStatusCenter defaultCenter];
+            if (center.authorizationStatus == INFocusStatusAuthorizationStatusNotDetermined) {
+                [center requestAuthorizationWithCompletionHandler:^(INFocusStatusAuthorizationStatus authorizationStatus) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [self getFocusStatus:command];
+                    });
+                }];
+                return;
+            }
+        }
+
+        [self getFocusStatus:command];
+    });
 }
 
 - (void)setAppBackgroundColor:(CDVInvokedUrlCommand *)command
