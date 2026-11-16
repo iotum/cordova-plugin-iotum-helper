@@ -1,5 +1,13 @@
 var exec = require('cordova/exec');
 
+exports.getFocusStatus = function (success, error) {
+	exec(success, error, 'IotumHelper', 'getFocusStatus', []);
+};
+
+exports.requestFocusStatusAuthorization = function (success, error) {
+	exec(success, error, 'IotumHelper', 'requestFocusStatusAuthorization', []);
+};
+
 exports.setAppBackgroundColor = function (argb) {
 	exec(null, null, 'IotumHelper', 'setAppBackgroundColor', [argb]);
 };

@@ -26,16 +26,29 @@
 
         <header-file src="src/ios/IotumHelperPlugin.h" />
         <source-file src="src/ios/IotumHelperPlugin.m" />
+        <framework src="Intents.framework" weak="true" />
+
+        <config-file target="*-Info.plist" parent="NSFocusStatusUsageDescription">
+            <string>Allow access to your Focus status to know when notifications are silenced.</string>
+        </config-file>
+
+        <config-file target="*/Entitlements-Debug.plist" parent="com.apple.developer.usernotifications.communication">
+            <true />
+        </config-file>
+
+        <config-file target="*/Entitlements-Release.plist" parent="com.apple.developer.usernotifications.communication">
+            <true />
+        </config-file>
     </platform>
 
     <platform name="android">
         <config-file parent="/*" target="res/xml/config.xml">
             <feature name="IotumHelper">
-                <param name="android-package" value="com.iotum.iotumhelper" />
+                <param name="android-package" value="com.iotum.iotumhelper.IotumHelperPlugin" />
                 <param name="onload" value="true" />
             </feature>
         </config-file>
 
-        <source-file src="src/android/IotumHelperPlugin.java" target-dir="src/com/iotum/helper" />
+        <source-file src="src/android/IotumHelperPlugin.java" target-dir="src/com/iotum/iotumhelper" />
     </platform>
 </plugin>
