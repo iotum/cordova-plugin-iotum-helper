@@ -1,5 +1,33 @@
 # cordova-plugin-iotum-helper
 
+## iOS Dynamic Type text scale
+
+On iOS, call `cordova.plugins.iotumHelper.watchTextScale(onScale, onError)` after
+Cordova's `deviceready` event. `onScale` receives a finite, positive number:
+UIKit's preferred Body font point size for the web view's current content size
+category divided by the preferred Body point size for the default Large
+category. Large is `1`; smaller categories can report less than `1`, and larger
+categories report more than `1`.
+
+Each subscription receives an initial value, then receives updates only when
+the ratio changes. The plugin checks on Dynamic Type changes and when the app
+becomes active again. `onError`, if supplied, receives a terminal error.
+
+```javascript
+// After deviceready, when mounting the web consumer:
+const unsubscribe = cordova.plugins.iotumHelper.watchTextScale(applyTextScale, console.error);
+
+// When unmounting the web consumer:
+unsubscribe();
+```
+
+The returned unsubscribe function is idempotent and only stops that
+subscription. Cordova also clears subscriptions when the web view resets
+(for example, on navigation or reload) or the plugin is disposed. Start a
+fresh subscription when the consumer mounts again, and after `deviceready`
+in a newly loaded document. There is no need to resubscribe on `resume`.
+Do not call this API on Android or in a regular browser.
+
 ## iOS Focus Status
 
 On iOS 15 and later, read the shared Focus status (including Do Not Disturb)
@@ -92,7 +120,13 @@ Cordova app and rebuild to apply the Android native and registration changes.
 ## Tests
 
 Run the JavaScript bridge tests with `node --test test/iotum_helpers.test.js`.
-Native behavior must be verified on an iOS device with Focus off/on (including Do
+For native Dynamic Type verification, start at Large (`1`), then change to a
+smaller category and an accessibility category, both while the web view is
+running and while the app is backgrounded. Check that resuming without changing
+size does not emit again, and that stopping or reloading stops the old watch.
+After reload, a fresh watch should report the current scale immediately.
+
+Native Focus behavior must be verified on an iOS device with Focus off/on (including Do
 Not Disturb), Share Focus Status off/on, and permission granted/denied. On Android,
 verify DND off, priority only, alarms only, and total silence where available,
 including without notification-policy access. Also verify reading again after

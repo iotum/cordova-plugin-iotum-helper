@@ -17,6 +17,80 @@ function loadHelpers(exec) {
     return context.exports;
 }
 
+test('watchTextScale streams numeric updates and unsubscribes idempotently', function () {
+    const calls = [];
+    const scales = [];
+    const helpers = loadHelpers((success, error, service, action, args) => {
+        calls.push({ success, error, service, action, args });
+    });
+
+    const unsubscribe = helpers.watchTextScale(scale => scales.push(scale), assert.fail);
+    const watch = calls[0];
+    assert.equal(watch.service, 'IotumHelper');
+    assert.equal(watch.action, 'watchTextScale');
+    assert.equal(watch.args.length, 1);
+    assert.equal(typeof watch.args[0], 'string');
+
+    watch.success(1);
+    watch.success(0.9);
+    watch.success(1.7);
+    unsubscribe();
+    unsubscribe();
+    watch.success(2);
+    watch.error('Late native error');
+
+    assert.deepEqual(scales, [1, 0.9, 1.7]);
+    assert.equal(calls.length, 2);
+    assert.equal(calls[1].service, 'IotumHelper');
+    assert.equal(calls[1].action, 'unwatchTextScale');
+    assert.equal(calls[1].args[0], watch.args[0]);
+});
+
+test('a fresh or concurrent watch is independent of an earlier watch', function () {
+    const watches = new Map();
+    const exec = (success, error, service, action, [id]) => {
+        if (action === 'watchTextScale') {
+            assert.equal(watches.has(id), false);
+            watches.set(id, success);
+        } else {
+            assert.equal(watches.delete(id), true);
+        }
+    };
+    const original = loadHelpers(exec);
+    const first = original.watchTextScale(assert.fail, assert.fail);
+    const second = original.watchTextScale(assert.fail, assert.fail);
+    const scales = [];
+    const fresh = loadHelpers(exec).watchTextScale(scale => scales.push(scale), assert.fail);
+
+    first();
+    second();
+    assert.equal(watches.size, 1);
+    for (const success of watches.values()) {
+        success(1.7);
+    }
+    assert.deepEqual(scales, [1.7]);
+    fresh();
+    assert.equal(watches.size, 0);
+});
+
+test('watchTextScale reports terminal errors once', function () {
+    const errors = [];
+    let fail;
+    let emit;
+    const helpers = loadHelpers((success, error, service, action) => {
+        assert.equal(action, 'watchTextScale');
+        fail = error;
+        emit = success;
+    });
+
+    const unsubscribe = helpers.watchTextScale(assert.fail, error => errors.push(error));
+    fail('Unavailable');
+    fail('Another error');
+    emit(1);
+    unsubscribe();
+    assert.deepEqual(errors, ['Unavailable']);
+});
+
 for (const action of ['getFocusStatus', 'requestFocusStatusAuthorization']) {
     test(action + ' forwards callbacks and invokes the matching native action', function () {
         const success = function () {};

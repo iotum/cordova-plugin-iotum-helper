@@ -1,5 +1,34 @@
 var exec = require('cordova/exec');
 
+// Namespace the IDs to this document so a stale stop cannot cancel a new page's watch.
+var textScaleWatchPrefix = Math.random().toString(36).slice(2) + ':';
+var nextTextScaleWatchId = 0;
+
+exports.watchTextScale = function (onScale, onError) {
+	var id = textScaleWatchPrefix + nextTextScaleWatchId++;
+	var stopped = false;
+
+	exec(function (scale) {
+		if (!stopped && typeof onScale === 'function') {
+			onScale(scale);
+		}
+	}, function (error) {
+		if (!stopped) {
+			stopped = true;
+			if (typeof onError === 'function') {
+				onError(error);
+			}
+		}
+	}, 'IotumHelper', 'watchTextScale', [id]);
+
+	return function unsubscribe() {
+		if (!stopped) {
+			stopped = true;
+			exec(null, null, 'IotumHelper', 'unwatchTextScale', [id]);
+		}
+	};
+};
+
 exports.getFocusStatus = function (success, error) {
 	exec(success, error, 'IotumHelper', 'getFocusStatus', []);
 };

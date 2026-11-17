@@ -1,6 +1,14 @@
 #import "IotumHelperPlugin.h"
 #import <Intents/Intents.h>
+#import <math.h>
 #import <objc/runtime.h>
+
+@interface IotumHelperPlugin ()
+
+@property (nonatomic, strong) NSMutableDictionary<NSString *, NSString *> *textScaleCallbacks;
+@property (nonatomic) CGFloat lastTextScale;
+
+@end
 
 @implementation IotumHelperPlugin
 
@@ -28,6 +36,139 @@ static IMP WKOriginalImp;
 
     WKClassString = [@[@"WK", @"Content", @"View"] componentsJoinedByString:@""];
 }
+
+#pragma mark Dynamic Type
+
+// Cordova invokes plugin commands and navigation reset on the main thread.
+- (void)watchTextScale:(CDVInvokedUrlCommand *)command
+{
+    NSString *subscriptionId = [command argumentAtIndex:0 withDefault:nil andClass:[NSString class]];
+    if (subscriptionId.length == 0 || self.textScaleCallbacks[subscriptionId] != nil) {
+        CDVPluginResult *result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
+                                                   messageAsString:@"Invalid text scale subscription"];
+        [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+        return;
+    }
+
+    if (self.textScaleCallbacks == nil) {
+        self.textScaleCallbacks = [NSMutableDictionary dictionary];
+        NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+        [center addObserver:self selector:@selector(textScaleDidChange:)
+                       name:UIContentSizeCategoryDidChangeNotification object:nil];
+        [center addObserver:self selector:@selector(textScaleDidChange:)
+                       name:UIApplicationDidBecomeActiveNotification object:nil];
+        if (@available(iOS 13.0, *)) {
+            [center addObserver:self selector:@selector(textScaleDidChange:)
+                           name:UISceneDidActivateNotification object:nil];
+        }
+    }
+
+    self.textScaleCallbacks[subscriptionId] = command.callbackId;
+    [self publishTextScaleForNewCallback:command.callbackId];
+}
+
+- (void)unwatchTextScale:(CDVInvokedUrlCommand *)command
+{
+    NSString *subscriptionId = [command argumentAtIndex:0 withDefault:nil andClass:[NSString class]];
+    if (subscriptionId.length == 0) {
+        return;
+    }
+
+    NSString *callbackId = self.textScaleCallbacks[subscriptionId];
+    if (callbackId == nil) {
+        return;
+    }
+
+    [self.textScaleCallbacks removeObjectForKey:subscriptionId];
+    if (self.textScaleCallbacks.count == 0) {
+        [self clearTextScaleWatchers];
+    }
+
+    // Release Cordova's kept callback without invoking either JS handler.
+    CDVPluginResult *result = [CDVPluginResult resultWithStatus:CDVCommandStatus_NO_RESULT];
+    [self.commandDelegate sendPluginResult:result callbackId:callbackId];
+}
+
+- (void)textScaleDidChange:(NSNotification *)notification
+{
+    // Let UIKit propagate the new category to the web view's traits first.
+    __weak IotumHelperPlugin *weakSelf = self;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [weakSelf publishTextScaleForNewCallback:nil];
+    });
+}
+
+- (void)publishTextScaleForNewCallback:(NSString *)newCallbackId
+{
+    if (self.textScaleCallbacks.count == 0) {
+        return;
+    }
+
+    CGFloat scale = 0;
+    if (@available(iOS 10.0, *)) {
+        UIContentSizeCategory category = self.webView.traitCollection.preferredContentSizeCategory;
+        if (category.length == 0 || [category isEqualToString:UIContentSizeCategoryUnspecified]) {
+            category = [UIApplication sharedApplication].preferredContentSizeCategory;
+        }
+        UIFont *current = [UIFont preferredFontForTextStyle:UIFontTextStyleBody
+                              compatibleWithTraitCollection:[UITraitCollection traitCollectionWithPreferredContentSizeCategory:category]];
+        UIFont *baseline = [UIFont preferredFontForTextStyle:UIFontTextStyleBody
+                               compatibleWithTraitCollection:[UITraitCollection traitCollectionWithPreferredContentSizeCategory:UIContentSizeCategoryLarge]];
+        if (baseline.pointSize > 0) {
+            scale = current.pointSize / baseline.pointSize;
+        }
+    }
+
+    if (!isfinite(scale) || scale <= 0) {
+        NSArray<NSString *> *callbacks = self.textScaleCallbacks.allValues;
+        [self clearTextScaleWatchers];
+        CDVPluginResult *result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
+                                                   messageAsString:@"Unable to determine iOS text scale"];
+        for (NSString *callbackId in callbacks) {
+            [self.commandDelegate sendPluginResult:result callbackId:callbackId];
+        }
+        return;
+    }
+
+    BOOL changed = scale != self.lastTextScale;
+    if (!changed && newCallbackId == nil) {
+        return;
+    }
+    self.lastTextScale = scale;
+
+    NSArray<NSString *> *callbacks = changed ? self.textScaleCallbacks.allValues : @[newCallbackId];
+    CDVPluginResult *result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDouble:scale];
+    [result setKeepCallbackAsBool:YES];
+    for (NSString *callbackId in callbacks) {
+        [self.commandDelegate sendPluginResult:result callbackId:callbackId];
+    }
+}
+
+- (void)clearTextScaleWatchers
+{
+    NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+    [center removeObserver:self name:UIContentSizeCategoryDidChangeNotification object:nil];
+    [center removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
+    if (@available(iOS 13.0, *)) {
+        [center removeObserver:self name:UISceneDidActivateNotification object:nil];
+    }
+    self.textScaleCallbacks = nil;
+    self.lastTextScale = 0;
+}
+
+- (void)onReset
+{
+    [self clearTextScaleWatchers];
+    [super onReset];
+}
+
+- (void)dispose
+{
+    [self clearTextScaleWatchers];
+    [super dispose];
+}
+
+#pragma mark Focus Status
 
 - (void)getFocusStatus:(CDVInvokedUrlCommand *)command
 {
