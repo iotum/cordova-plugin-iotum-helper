@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
-    xmlns:android="http://schemas.android.com/apk/res/android" id="cordova-plugin-iotum-helper" version="1.2.0">
+    xmlns:android="http://schemas.android.com/apk/res/android" id="cordova-plugin-iotum-helper" version="1.2.2">
     <name>IotumHelper</name>
     <description>Iotum App Helpers</description>
     <author>Jerry Hu</author>
@@ -30,6 +30,13 @@
 
         <config-file target="*-Info.plist" parent="NSFocusStatusUsageDescription">
             <string>Allow access to your Focus status to know when notifications are silenced.</string>
+        </config-file>
+
+        <!-- Required by App Store validation for apps with the communication notifications entitlement (ITMS-90894) -->
+        <config-file target="*-Info.plist" parent="NSUserActivityTypes">
+            <array>
+                <string>INStartCallIntent</string>
+            </array>
         </config-file>
 
         <config-file target="*/Entitlements-Debug.plist" parent="com.apple.developer.usernotifications.communication">

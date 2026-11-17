@@ -44,8 +44,12 @@ proof that no Focus is active. Status is a snapshot; call again when needed or
 when the app resumes.
 
 The plugin weak-links `Intents.framework`, adds `NSFocusStatusUsageDescription`
-to the app's Info.plist, and adds the Communication Notifications entitlement
-(`com.apple.developer.usernotifications.communication`). Enable the Communication
+and `NSUserActivityTypes` (`INStartCallIntent`) to the app's Info.plist, and adds
+the Communication Notifications entitlement
+(`com.apple.developer.usernotifications.communication`), which iOS requires for
+reading Focus status. App Store validation rejects apps with this entitlement
+unless `NSUserActivityTypes` lists `INStartCallIntent` or `INSendMessageIntent`
+(ITMS-90894). Enable the Communication
 Notifications capability for the host app's App ID and ensure its provisioning
 profile supports the entitlement. Build with an iOS 15+ SDK. Reinstall/update the
 plugin in the host Cordova app to apply the native configuration changes. On iOS
