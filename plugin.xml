@@ -39,11 +39,7 @@
             </array>
         </config-file>
 
-        <config-file target="*/Entitlements-Debug.plist" parent="com.apple.developer.usernotifications.communication">
-            <true />
-        </config-file>
-
-        <config-file target="*/Entitlements-Release.plist" parent="com.apple.developer.usernotifications.communication">
+        <config-file target="Entitlements-*.plist" parent="com.apple.developer.usernotifications.communication">
             <true />
         </config-file>
     </platform>
